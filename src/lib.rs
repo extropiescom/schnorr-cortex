@@ -261,6 +261,8 @@
 extern crate alloc;
 
 extern crate alloc_cortex_m;
+//extern crate cortex_m_semihosting;
+
 #[macro_use]
 //extern crate cortex_m_rt as rt; // v0.5.x
 
@@ -335,13 +337,7 @@ pub unsafe extern "C" fn add_rust(a:i8,b:i8) -> usize{
 		let message:[u8;12] = [116,101,115,116,32,109,101,115,115,97,103,101];
 		let signature_bytes:[u8;64] = [79,181,251,131,123,104,226,50,24,126,161,104,68,87,139,213,9,38,177,5,32,243,173,134,203,157,193,119,141,137,180,5,61,9,29,123,200,159,44,182,95,88,238,141,82,100,161,222,74,28,169,151,226,29,35,130,179,216,1,57,57,138,28,133];
 		let good: &[u8] = "test message".as_bytes();
-		//let mut lower: [u8; 32] = [0u8; 32];
-        //let mut upper: [u8; 64] = [0u8; 64];
-        //lower.copy_from_slice(&signature_bytes[..32]);
-        //upper.copy_from_slice(&signature_bytes[..]);
-        
-		//return upper[63] as usize;
-		
+				
 		let signature = match Signature::from_bytes(&signature_bytes[..])
 						{
 							Ok(some_sig)=>some_sig,
@@ -477,12 +473,12 @@ pub unsafe extern "C" fn schnr_keypair_from_seed(seed:*const u8) -> (Box<sr_data
 
 
 
-
+/*
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
-
+*/
 #[alloc_error_handler]
 fn foo(_: core::alloc::Layout) -> ! {
     loop {}

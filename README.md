@@ -54,6 +54,8 @@ avx2_backend = ["curve25519-dalek/avx2_backend", "ed25519-dalek/avx2_backend"]
 
 cortex-m-rt = {version="0.6.8"}
 
-
+ cargo build --release --target thumbv7m-none-eabi --no-default-features
 gcc -g -o test ./src/lib.c ./src/test.c  -L. -static ./target/release/libsr.a
 gcc  ./src/lib.c ./src/test.c -L. ./target/release/libsr.a -o test
+
+cortex-m-semihosting = "0.3.3"

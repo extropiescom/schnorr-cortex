@@ -191,6 +191,7 @@ impl Keypair {
         // independent from the mutating scalar and new chain code.
         let mut nonce = [0u8; 32];
         //thread_rng().fill_bytes(&mut nonce);//ForceModify
+        // TODO this is easy
         // Ideally we'd use the witness mechanism from `merlin::transcript` here,
         // instead of the commit and challenge machinery.  Yet, we lack access so
         // long as we work behind the `SigningTranscript` trait, so we fork the

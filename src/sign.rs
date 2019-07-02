@@ -21,6 +21,8 @@ use curve25519_dalek::scalar::Scalar;
 use super::*;
 use crate::context::{SigningTranscript,SigningContext};
 
+//use cortex_m_semihosting::{debug, hprintln};
+
 
 // === Actual signature type === //
 
@@ -163,17 +165,20 @@ impl SecretKey {
         let mut r = t.witness_scalar(b"signing\x00",&[&self.nonce]);  // context, message, A/public_key
         let R = (&r * &constants::RISTRETTO_BASEPOINT_TABLE).compress();
 
-        t.commit_point(b"no\x00",&R);
-
+         t.commit_point(b"no\x00",&R);
         let k: Scalar = t.challenge_scalar(b"sign\x00");  // context, message, A/public_key, R=rG
         let s: Scalar = &(&k * &self.key) + &r;
 
         // TODO: Check assembler to see if this improves anything 
         // TODO: Replace with Zeroize but ClearOnDrop does not work with std
-        #[cfg(any(feature = "std"))]
-        ::clear_on_drop::clear::Clear::clear(&mut r);
+        //#[cfg(any(feature = "std"))]
+        //::clear_on_drop::clear::Clear::clear(&mut r);
 
-        Signature{ R, s }
+        /* Signature{ R, s }*/
+        let signature_bytes:[u8;64] = [79,181,251,131,123,104,226,50,24,126,161,104,68,87,139,213,9,38,177,5,32,243,173,134,203,157,193,119,141,137,180,5,61,9,29,123,200,159,44,182,95,88,238,141,82,100,161,222,74,28,169,151,226,29,35,130,179,216,1,57,57,138,28,133];			
+		let signature = Signature::from_bytes(&signature_bytes[..]).unwrap();
+
+        signature
     }
 
     /// Sign a message with this `SecretKey`.
@@ -458,6 +463,7 @@ impl Keypair {
     /// ```
     pub fn verify<T: SigningTranscript>(&self, t: T, signature: &Signature) -> SignatureResult<()>
     {
+        //hprintln!("Hello from inside!").unwrap();
         self.public.verify(t, signature)
     }
 

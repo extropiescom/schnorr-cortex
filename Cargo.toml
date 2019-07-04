@@ -21,16 +21,18 @@ crate-type = ["staticlib"]
 keccak = { version = "0.1.0", default-features = false }
 byteorder = { version = "1.2.4", default-features = false }
 clear_on_drop = "0.2.3"
-rand_core = { version = "0.3", default-features = false }
-rand = {version = "0.6.5", default-features = false, features = ["i128_support"]}
 subtle = {version = "2.0.0",default-features = false}
 curve25519-dalek = { version = "1.1", default-features = false, features = ["u32_backend"] }
-rand_chacha ={version = "0.1.0",default-features = false}
 failure = {version = "^0.1.1",default-features = false}
 sha2 = {version = "^0.8" , default-features = false}
 merlin = { path="./merlin"}
 ed25519-dalek = {path="./ed25519-dalek"}
-alloc-cortex-m = {version = "0.3.5"}
+alloc-cortex-m = {path="./alloc-cortex-m"}
+rand_core = { version = "0.3", default-features = false }
+rand = {version = "0.6.5", default-features = false, features = ["i128_support"]}
+rand_chacha ={version = "0.1.0",default-features = false}
+cortex-m = "0.6.0"
+cortex-m-rt = "0.6.8"
 
 
 [profile.dev]

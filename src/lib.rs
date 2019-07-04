@@ -329,6 +329,74 @@ pub struct sr_data{
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn test_sign_verify()->u8
+{
+	const SIGNING_CTX: &'static [u8] = b"good";
+	let context = signing_context(SIGNING_CTX);
+	let keypair: Keypair;
+	let keypair_bytes: [u8;96] = [74,83,195,251,188,89,151,14,229,248,90,248,19,135,93,255,193,58,144,74,46,83,174,126,101,250,13,234,110,98,201,1,159,7,231,190,85,81,56,122,152,186,151,124,115,45,8,13,203,15,41,160,72,227,101,105,18,198,83,62,50,238,122,237,156,102,163,57,200,52,79,146,47,195,32,108,181,218,232,20,165,148,192,23,125,211,35,92,37,77,156,64,154,101,184,8];
+	let message: &[u8] = "This is a test of the tsunami alert system.".as_bytes();
+	keypair  = Keypair::from_bytes(&keypair_bytes[..]).unwrap();
+	let signature: Signature = keypair.sign(context.bytes(message));
+	 if keypair.verify(context.bytes(&message), &signature).is_ok()
+    		{12}
+	   else
+	   		{13}
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn test_sign_ptr() -> *mut u8{
+	 let start:usize = 0x2000700;
+     let size:usize = 256; // in bytes
+	 unsafe { ALLOCATOR.init(start, size) }
+
+	const SIGNING_CTX: &'static [u8] = b"good";
+	let context = signing_context(SIGNING_CTX);
+	let keypair: Keypair;
+	let keypair_bytes: [u8;96] = [74,83,195,251,188,89,151,14,229,248,90,248,19,135,93,255,193,58,144,74,46,83,174,126,101,250,13,234,110,98,201,1,159,7,231,190,85,81,56,122,152,186,151,124,115,45,8,13,203,15,41,160,72,227,101,105,18,198,83,62,50,238,122,237,156,102,163,57,200,52,79,146,47,195,32,108,181,218,232,20,165,148,192,23,125,211,35,92,37,77,156,64,154,101,184,8];
+	let message: &[u8] = "This is a test of the tsunami alert system.".as_bytes();
+	keypair  = Keypair::from_bytes(&keypair_bytes[..]).unwrap();
+	let signature: Signature = keypair.sign(context.bytes(message));
+	let signature_bytes = signature.to_bytes(); 
+	//{signature_bytes[63]}
+
+	let mut data:[u8;96] = [0;96];
+
+	let mut i =0;
+	while i<64 {
+		data[i] = signature_bytes[i];
+		i = i+1;
+	}
+	let b = Box::new(data);
+	return Box::into_raw(b) as *mut u8;
+
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn test_sign() -> (Box<sr_data>){
+	const SIGNING_CTX: &'static [u8] = b"good";
+	let context = signing_context(SIGNING_CTX);
+	let keypair: Keypair;
+	let keypair_bytes: [u8;96] = [74,83,195,251,188,89,151,14,229,248,90,248,19,135,93,255,193,58,144,74,46,83,174,126,101,250,13,234,110,98,201,1,159,7,231,190,85,81,56,122,152,186,151,124,115,45,8,13,203,15,41,160,72,227,101,105,18,198,83,62,50,238,122,237,156,102,163,57,200,52,79,146,47,195,32,108,181,218,232,20,165,148,192,23,125,211,35,92,37,77,156,64,154,101,184,8];
+	let message: &[u8] = "This is a test of the tsunami alert system.".as_bytes();
+	keypair  = Keypair::from_bytes(&keypair_bytes[..]).unwrap();
+	let signature: Signature = keypair.sign(context.bytes(message));
+	let signature_bytes = signature.to_bytes(); 
+
+	let mut data:[u8;96] = [0;96];
+	let status:u32 = STATUS_OK;
+	let len : u32 = 64;
+
+	let mut i =0;
+	while i<64 {
+		data[i] = signature_bytes[i];
+		i = i+1;
+	}
+	let sr_data = sr_data { data: data,len:len, status:status};
+	Box::new(sr_data)
+}
+
+#[no_mangle]
 pub unsafe extern "C" fn add_rust(a:i8,b:i8) -> usize{
 		const SIGNING_CTX: &'static [u8] = b"good";
 		let context = signing_context(SIGNING_CTX);
@@ -346,10 +414,16 @@ pub unsafe extern "C" fn add_rust(a:i8,b:i8) -> usize{
 		//return 9;
         keypair  = Keypair::from_bytes(&keypair_bytes[..]).unwrap();
 
-	   if keypair.verify(context.bytes(&good), &signature).is_ok()
+		 let message2: &[u8] = "This is a test of the tsunami alert system.".as_bytes();
+    	 let signature2: Signature = keypair.sign(context.bytes(message2));
+
+		 {4}
+
+
+	  /* if keypair.verify(context.bytes(&good), &signature).is_ok()
     		{2}
 	   else
-	   		{3}
+	   		{3}*/
 }
 
 /// Sign a message
@@ -473,12 +547,12 @@ pub unsafe extern "C" fn schnr_keypair_from_seed(seed:*const u8) -> (Box<sr_data
 
 
 
-/*
+
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     loop {}
 }
-*/
+
 #[alloc_error_handler]
 fn foo(_: core::alloc::Layout) -> ! {
     loop {}

@@ -174,11 +174,11 @@ impl SecretKey {
         //#[cfg(any(feature = "std"))]
         //::clear_on_drop::clear::Clear::clear(&mut r);
 
-        /* Signature{ R, s }*/
-        let signature_bytes:[u8;64] = [79,181,251,131,123,104,226,50,24,126,161,104,68,87,139,213,9,38,177,5,32,243,173,134,203,157,193,119,141,137,180,5,61,9,29,123,200,159,44,182,95,88,238,141,82,100,161,222,74,28,169,151,226,29,35,130,179,216,1,57,57,138,28,133];			
-		let signature = Signature::from_bytes(&signature_bytes[..]).unwrap();
+        Signature{ R, s }
+        //let signature_bytes:[u8;64] = [79,181,251,131,123,104,226,50,24,126,161,104,68,87,139,213,9,38,177,5,32,243,173,134,203,157,193,119,141,137,180,5,61,9,29,123,200,159,44,182,95,88,238,141,82,100,161,222,74,28,169,151,226,29,35,130,179,216,1,57,57,138,28,133];			
+		//let signature = Signature::from_bytes(&signature_bytes[..]).unwrap();
 
-        signature
+        //signature
     }
 
     /// Sign a message with this `SecretKey`.

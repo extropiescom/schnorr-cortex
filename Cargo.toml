@@ -11,10 +11,10 @@ categories = ["cryptography", "no-std"]
 description = "Schnorr VRF, signatures, etc. using the Ristretto group"
 exclude = [ ".gitignore", "TESTVECTORS", "res/*" ]
 
-#[lib]
-#name = "sr"
-#path = "src/lib.rs"
-#crate-type = ["staticlib"]
+[lib]
+name = "sr"
+path = "src/lib.rs"
+crate-type = ["staticlib"]
 
 
 [dependencies]

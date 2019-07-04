@@ -94,13 +94,13 @@ pub trait SigningTranscript {
     /// Produce secret witness bytes from the protocol transcript
     /// and any "nonce seeds" kept with the secret keys.
     fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]) {
-    	//self.witness_bytes_rng(label, dest, nonce_seeds, thread_rng())
+    	self.witness_bytes_rng(label, dest, nonce_seeds)
     }//ForceModified
 
     /// Produce secret witness bytes from the protocol transcript
     /// and any "nonce seeds" kept with the secret keys.
-    fn witness_bytes_rng<R>(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]], rng: R)
-    where R: Rng+CryptoRng;
+    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: R*/);
+    //where R: Rng+CryptoRng;
 }
 
 
@@ -132,9 +132,9 @@ where T: SigningTranscript + ?Sized,
     fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]])
         {  (**self).witness_bytes(label,dest,nonce_seeds)  }
     #[inline(always)]
-    fn witness_bytes_rng<R>(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]], rng: R)
-    where R: Rng+CryptoRng
-        {  (**self).witness_bytes_rng(label,dest,nonce_seeds,rng)  }
+    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: R*/) 
+    //where R: Rng+CryptoRng
+        {  (**self).witness_bytes_rng(label,dest,nonce_seeds/*,rng*/)  }
 }
 
 /// We delegate `SigningTranscript` methods to the corresponding
@@ -150,15 +150,16 @@ impl SigningTranscript for Transcript {
         Transcript::challenge_bytes(self, label, dest)
     }
 
-    fn witness_bytes_rng<R>(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]], mut rng: R)
-    where R: Rng+CryptoRng
+    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, mut rng: R*/)
+    //where R: Rng+CryptoRng
     {
         let mut br = self.build_rng();
         for ns in nonce_seeds {
             br = br.rekey_with_witness_bytes(label, ns);
         }
-        let mut r = br.finalize(&mut rng);
-        r.fill_bytes(dest)
+       // let mut r = br.finalize(&mut rng);
+       let mut r = br.finalize_simple();
+       r.fill_bytes(dest)
     }
 }
 
@@ -300,8 +301,8 @@ where H: Input + ExtendableOutput + Clone
         self.0.clone().chain(b"xof").xof_result().read(dest);
     }
 
-    fn witness_bytes_rng<R>(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]], mut rng: R)
-    where R: Rng+CryptoRng
+    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, mut rng: R*/)
+    //where R: Rng+CryptoRng
     {
         let mut h = self.0.clone().chain(b"wb");
         input_bytes(&mut h, label);
@@ -312,7 +313,7 @@ where H: Input + ExtendableOutput + Clone
         h.input(l.to_le_bytes());
 
         let mut r = [0u8; 32];
-        rng.fill_bytes(&mut r);
+        //rng.fill_bytes(&mut r); //ForceModified
         h.input(&r);
         h.xof_result().read(dest);
     }
@@ -361,11 +362,11 @@ where T: SigningTranscript, R: Rng+CryptoRng
         {  self.t.challenge_bytes(label, dest)  }
 
     fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]])
-       {  self.witness_bytes_rng(label, dest, nonce_seeds, &mut *self.rng.borrow_mut())  }
+       {  self.witness_bytes_rng(label, dest, nonce_seeds/*, &mut *self.rng.borrow_mut()*/)  }
 
-    fn witness_bytes_rng<RR>(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]], rng: RR)
-    where RR: Rng+CryptoRng
-       {  self.t.witness_bytes_rng(label,dest,nonce_seeds,rng)  }
+    fn witness_bytes_rng/*<RR>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: RR*/)
+    //where RR: Rng+CryptoRng
+       {  self.t.witness_bytes_rng(label,dest,nonce_seeds/*,rng*/)  }
 
 }
 

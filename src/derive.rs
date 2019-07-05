@@ -181,7 +181,7 @@ impl Keypair {
     pub fn derive_secret_key<T>(&self, mut t: T, cc: ChainCode) -> (SecretKey, ChainCode)
     where T: SigningTranscript+Clone
     {
-        use ::rand::prelude::*;
+        //use ::rand::prelude::*;//ForceModify 
 
         let (scalar, chaincode) = self.public.derive_scalar_and_chaincode(&mut t, cc);
 
@@ -291,65 +291,3 @@ impl ExtendedKey<SecretKey> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use rand::prelude::*; // thread_rng
-
-    use sha3::digest::{Input}; // ExtendableOutput,XofReader
-    use sha3::{Shake128};
-
-    use super::*;
-
-    #[test]
-    fn derive_key_public_vs_private_paths() {
-        let mut rng = thread_rng();
-        let chaincode = ChainCode([0u8; CHAIN_CODE_LENGTH]);
-        let msg : &'static [u8] = b"Just some test message!";
-        let mut h = Shake128::default().chain(msg);
-
-        let key = Keypair::generate(&mut rng);
-        let mut extended_public_key = ExtendedKey {
-            key: key.public.clone(),
-            chaincode,
-        };
-        let mut extended_keypair = ExtendedKey { key, chaincode, };
-
-        let ctx = signing_context(b"testing testing 1 2 3");
-
-        for i in 0..30 {
-            let extended_keypair1 = extended_keypair.derived_key_simple(msg);
-            let extended_public_key1 = extended_public_key.derived_key_simple(msg);
-            assert_eq!(
-                extended_keypair1.chaincode, extended_public_key1.chaincode,
-                "Chain code derivation failed!"
-            );
-            assert_eq!(
-                extended_keypair1.key.public, extended_public_key1.key,
-                "Public and secret key derivation missmatch!"
-            );
-            extended_keypair = extended_keypair1;
-            extended_public_key = extended_public_key1;
-
-            h.input(b"Another");
-
-            if i % 5 == 0 {
-                let good_sig = extended_keypair.key.sign(ctx.xof(h.clone()));
-                let h_bad = h.clone().chain(b"oops");
-                let bad_sig = extended_keypair.key.sign(ctx.xof(h_bad.clone()));
-
-                assert!(
-                    extended_public_key.key.verify(ctx.xof(h.clone()), &good_sig).is_ok(),
-                    "Verification of a valid signature failed!"
-                );
-                assert!(
-                    ! extended_public_key.key.verify(ctx.xof(h.clone()), &bad_sig).is_ok(),
-                    "Verification of a signature on a different message passed!"
-                );
-                assert!(
-                    ! extended_public_key.key.verify(ctx.xof(h_bad), &good_sig).is_ok(),
-                    "Verification of a signature on a different message passed!"
-                );
-            }
-        }
-    }
-}

@@ -12,7 +12,7 @@
 
 use core::fmt::{Debug};
 
-use rand::prelude::*;  // {RngCore,thread_rng};
+//use rand::prelude::*;  // {RngCore,thread_rng}; //ForceModify
 
 use curve25519_dalek::constants;
 use curve25519_dalek::ristretto::{CompressedRistretto,RistrettoPoint};
@@ -139,7 +139,7 @@ impl Signature {
     }
 }
 
-serde_boilerplate!(Signature);
+//serde_boilerplate!(Signature);
 
 
 // === Implement signing and verification operations on key types === //
@@ -162,7 +162,7 @@ impl SecretKey {
         t.proto_name(b"Schnorr-sig");
         t.commit_point(b"pk\x00",public_key.as_compressed());
 
-        let mut r = t.witness_scalar(b"signing\x00",&[&self.nonce]);  // context, message, A/public_key
+        let r = t.witness_scalar(b"signing\x00",&[&self.nonce]);  // context, message, A/public_key
         let R = (&r * &constants::RISTRETTO_BASEPOINT_TABLE).compress();
 
          t.commit_point(b"no\x00",&R);
@@ -175,10 +175,22 @@ impl SecretKey {
         //::clear_on_drop::clear::Clear::clear(&mut r);
 
         Signature{ R, s }
-        //let signature_bytes:[u8;64] = [79,181,251,131,123,104,226,50,24,126,161,104,68,87,139,213,9,38,177,5,32,243,173,134,203,157,193,119,141,137,180,5,61,9,29,123,200,159,44,182,95,88,238,141,82,100,161,222,74,28,169,151,226,29,35,130,179,216,1,57,57,138,28,133];			
-		//let signature = Signature::from_bytes(&signature_bytes[..]).unwrap();
+    }
 
-        //signature
+    #[allow(non_snake_case)]
+    pub fn sign_trng<T: SigningTranscript>(&self, mut t: T, trng: &[u8], public_key: &PublicKey) -> Signature 
+    {
+        t.proto_name(b"Schnorr-sig");
+        t.commit_point(b"pk\x00",public_key.as_compressed());
+
+        let r = t.witness_scalar_trng(b"signing\x00",&[&self.nonce],trng);  // context, message, A/public_key
+        let R = (&r * &constants::RISTRETTO_BASEPOINT_TABLE).compress();
+
+         t.commit_point(b"no\x00",&R);
+        let k: Scalar = t.challenge_scalar(b"sign\x00");  // context, message, A/public_key, R=rG
+        let s: Scalar = &(&k * &self.key) + &r;
+
+        Signature{ R, s }
     }
 
     /// Sign a message with this `SecretKey`.
@@ -427,6 +439,10 @@ impl Keypair {
     {
         self.secret.sign(t, &self.public)
     }
+    pub fn sign_trng<T: SigningTranscript>(&self, t: T, trng: &[u8]) -> Signature 
+    {
+        self.secret.sign_trng(t, trng, &self.public)
+    }
 
     /// Sign a message with this keypair's secret key.
     pub fn sign_simple(&self, ctx: &'static [u8], msg: &[u8]) -> Signature
@@ -473,113 +489,3 @@ impl Keypair {
         self.public.verify_simple(ctx, msg, signature)
     }
 }
-
-
-#[cfg(test)]
-mod test {
-    #[cfg(feature = "alloc")]
-    use alloc::vec::Vec;
-    #[cfg(feature = "std")]
-    use std::vec::Vec;
-
-    use rand::prelude::*; // ThreadRng,thread_rng
-    use rand_chacha::ChaChaRng;
-    use sha3::Shake128;
-    use curve25519_dalek::digest::{Input};
-
-    use super::super::*;
-
-
-    #[test]
-    fn sign_verify_bytes() {
-        let mut csprng: ChaChaRng;
-        let keypair: Keypair;
-        let good_sig: Signature;
-        let bad_sig:  Signature;
-
-        let ctx = signing_context(b"good");
-        
-        let good: &[u8] = "test message".as_bytes();
-        let bad:  &[u8] = "wrong message".as_bytes();
-
-        csprng  = ChaChaRng::from_seed([0u8; 32]);
-        keypair  = Keypair::generate(&mut csprng);
-        good_sig = keypair.sign(ctx.bytes(&good));
-        bad_sig  = keypair.sign(ctx.bytes(&bad));
-
-        let good_sig = Signature::from_bytes(&good_sig.to_bytes()[..]).unwrap();
-        let bad_sig  = Signature::from_bytes(&bad_sig.to_bytes()[..]).unwrap();
-
-        assert!(keypair.verify(ctx.bytes(&good), &good_sig).is_ok(),
-                "Verification of a valid signature failed!");
-        assert!(!keypair.verify(ctx.bytes(&good), &bad_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-        assert!(!keypair.verify(ctx.bytes(&bad),  &good_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-        assert!(!keypair.verify(signing_context(b"bad").bytes(&good),  &good_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-    }
-
-    #[test]
-    fn sign_verify_xof() {
-        let mut csprng: ChaChaRng;
-        let keypair: Keypair;
-        let good_sig: Signature;
-        let bad_sig:  Signature;
-
-        let ctx = signing_context(b"testing testing 1 2 3");
-
-        let good: &[u8] = b"test message";
-        let bad:  &[u8] = b"wrong message";
-
-        let prehashed_good: Shake128 = Shake128::default().chain(good);
-        let prehashed_bad: Shake128 = Shake128::default().chain(bad);
-        // You may verify that `Shake128: Copy` is possible, making these clones below correct.
-
-        csprng   = ChaChaRng::from_seed([0u8; 32]);
-        keypair  = Keypair::generate(&mut csprng);
-        good_sig = keypair.sign(ctx.xof(prehashed_good.clone()));
-        bad_sig  = keypair.sign(ctx.xof(prehashed_bad.clone()));
-
-        let good_sig = Signature::from_bytes(&good_sig.to_bytes()[..]).unwrap();
-        let bad_sig  = Signature::from_bytes(&bad_sig.to_bytes()[..]).unwrap();
-
-        assert!(keypair.verify(ctx.xof(prehashed_good.clone()), &good_sig).is_ok(),
-                "Verification of a valid signature failed!");
-        assert!(! keypair.verify(ctx.xof(prehashed_good.clone()), &bad_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-        assert!(! keypair.verify(ctx.xof(prehashed_bad.clone()), &good_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-        assert!(! keypair.verify(signing_context(b"oops").xof(prehashed_good), &good_sig).is_ok(),
-                "Verification of a signature on a different message passed!");
-    }
-
-    #[cfg(any(feature = "alloc", feature = "std"))]
-    #[test]
-    fn verify_batch_seven_signatures() {
-        let ctx = signing_context(b"my batch context");
-
-        let messages: [&[u8]; 7] = [
-            b"Watch closely everyone, I'm going to show you how to kill a god.",
-            b"I'm not a cryptographer I just encrypt a lot.",
-            b"Still not a cryptographer.",
-            b"This is a test of the tsunami alert system. This is only a test.",
-            b"Fuck dumbin' it down, spit ice, skip jewellery: Molotov cocktails on me like accessories.",
-            b"Hey, I never cared about your bucks, so if I run up with a mask on, probably got a gas can too.",
-            b"And I'm not here to fill 'er up. Nope, we came to riot, here to incite, we don't want any of your stuff.", ];
-        let mut csprng: ThreadRng = thread_rng();
-        let mut keypairs: Vec<Keypair> = Vec::new();
-        let mut signatures: Vec<Signature> = Vec::new();
-
-        for i in 0..messages.len() {
-            let keypair: Keypair = Keypair::generate(&mut csprng);
-            signatures.push(keypair.sign(ctx.bytes(messages[i])));
-            keypairs.push(keypair);
-        }
-        let public_keys: Vec<PublicKey> = keypairs.iter().map(|key| key.public).collect();
-        let transcripts = messages.iter().map(|m| ctx.bytes(m));
-
-        assert!( verify_batch(transcripts, &signatures[..], &public_keys[..]).is_ok() );
-    }
-}
-

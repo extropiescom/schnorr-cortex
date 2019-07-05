@@ -9,18 +9,17 @@
 
 //! ### Schnorr signature contexts and configuration, adaptable to most Schnorr signature schemes.
 
-use core::{cell::RefCell};
+//use core::cell::RefCell;
 
-use rand::prelude::*;  // {RngCore,thread_rng};
+use rand_core::RngCore; // {RngCore,thread_rng};
 
-use merlin::{Transcript};
+use merlin::Transcript;
 
-use curve25519_dalek::digest::{Input,FixedOutput,ExtendableOutput,XofReader};
-use curve25519_dalek::digest::generic_array::typenum::{U32,U64};
+use curve25519_dalek::digest::generic_array::typenum::{U32, U64};
+use curve25519_dalek::digest::{ExtendableOutput, FixedOutput, Input, XofReader};
 
-use curve25519_dalek::ristretto::{CompressedRistretto}; // RistrettoPoint
+use curve25519_dalek::ristretto::CompressedRistretto; // RistrettoPoint
 use curve25519_dalek::scalar::Scalar;
-
 
 // === Signing context as transcript === //
 
@@ -91,50 +90,97 @@ pub trait SigningTranscript {
         Scalar::from_bytes_mod_order_wide(&scalar_bytes)
     }
 
+    fn witness_scalar_trng(
+        &self,
+        label: &'static [u8],
+        nonce_seeds: &[&[u8]],
+        trng: &[u8],
+    ) -> Scalar {
+        let mut scalar_bytes = [0u8; 64];
+        self.witness_bytes_trng(label, &mut scalar_bytes, nonce_seeds, trng);
+        Scalar::from_bytes_mod_order_wide(&scalar_bytes)
+    }
+
     /// Produce secret witness bytes from the protocol transcript
     /// and any "nonce seeds" kept with the secret keys.
     fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]) {
-    	self.witness_bytes_rng(label, dest, nonce_seeds)
-    }//ForceModified
+        self.witness_bytes_rng(label, dest, nonce_seeds)
+    } //ForceModified
 
     /// Produce secret witness bytes from the protocol transcript
     /// and any "nonce seeds" kept with the secret keys.
-    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: R*/);
-    //where R: Rng+CryptoRng;
-}
+    fn witness_bytes_rng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]], /*, rng: R*/
+    );
 
+    fn witness_bytes_trng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]],
+        trng: &[u8],
+    );
+}
 
 /// We delegates any mutable reference to its base type, like `&mut Rng`
 /// or similar to `BorrowMut<..>` do, but doing so here simplifies
 /// alternative implementations.
 impl<T> SigningTranscript for &mut T
-where T: SigningTranscript + ?Sized,
+where
+    T: SigningTranscript + ?Sized,
 {
     #[inline(always)]
-    fn commit_bytes(&mut self, label: &'static [u8], bytes: &[u8])
-        {  (**self).commit_bytes(label,bytes)  }
+    fn commit_bytes(&mut self, label: &'static [u8], bytes: &[u8]) {
+        (**self).commit_bytes(label, bytes)
+    }
     #[inline(always)]
-    fn proto_name(&mut self, label: &'static [u8])
-        {  (**self).proto_name(label)  }
+    fn proto_name(&mut self, label: &'static [u8]) {
+        (**self).proto_name(label)
+    }
     #[inline(always)]
-    fn commit_point(&mut self, label: &'static [u8], compressed: &CompressedRistretto)
-        {  (**self).commit_point(label, compressed)  }
+    fn commit_point(&mut self, label: &'static [u8], compressed: &CompressedRistretto) {
+        (**self).commit_point(label, compressed)
+    }
     #[inline(always)]
-    fn challenge_bytes(&mut self, label: &'static [u8], dest: &mut [u8])
-        {  (**self).challenge_bytes(label,dest)  }
+    fn challenge_bytes(&mut self, label: &'static [u8], dest: &mut [u8]) {
+        (**self).challenge_bytes(label, dest)
+    }
     #[inline(always)]
-    fn challenge_scalar(&mut self, label: &'static [u8]) -> Scalar
-        {  (**self).challenge_scalar(label)  }
+    fn challenge_scalar(&mut self, label: &'static [u8]) -> Scalar {
+        (**self).challenge_scalar(label)
+    }
     #[inline(always)]
-    fn witness_scalar(&self, label: &'static [u8], nonce_seeds: &[&[u8]]) -> Scalar
-        {  (**self).witness_scalar(label,nonce_seeds)  }
+    fn witness_scalar(&self, label: &'static [u8], nonce_seeds: &[&[u8]]) -> Scalar {
+        (**self).witness_scalar(label, nonce_seeds)
+    }
     #[inline(always)]
-    fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]])
-        {  (**self).witness_bytes(label,dest,nonce_seeds)  }
+    fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]) {
+        (**self).witness_bytes(label, dest, nonce_seeds)
+    }
     #[inline(always)]
-    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: R*/) 
+    fn witness_bytes_rng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]], /*, rng: R*/
+    )
     //where R: Rng+CryptoRng
-        {  (**self).witness_bytes_rng(label,dest,nonce_seeds/*,rng*/)  }
+    {
+        (**self).witness_bytes_rng(label, dest, nonce_seeds /*,rng*/)
+    }
+    #[inline(always)]
+    fn witness_bytes_trng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]],
+        trng: &[u8],
+    ) {
+        (**self).witness_bytes_trng(label, dest, nonce_seeds, trng)
+    }
 }
 
 /// We delegate `SigningTranscript` methods to the corresponding
@@ -150,23 +196,42 @@ impl SigningTranscript for Transcript {
         Transcript::challenge_bytes(self, label, dest)
     }
 
-    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, mut rng: R*/)
+    fn witness_bytes_rng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]], /*, mut rng: R*/
+    )
     //where R: Rng+CryptoRng
     {
         let mut br = self.build_rng();
         for ns in nonce_seeds {
             br = br.rekey_with_witness_bytes(label, ns);
         }
-       // let mut r = br.finalize(&mut rng);
-       let mut r = br.finalize_simple();
-       r.fill_bytes(dest)
+        // let mut r = br.finalize(&mut rng);
+        let mut r = br.finalize_simple();
+        r.fill_bytes(dest)
+    }
+
+    fn witness_bytes_trng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]],
+        trng: &[u8],
+    ) {
+        let mut br = self.build_rng();
+        for ns in nonce_seeds {
+            br = br.rekey_with_witness_bytes(label, ns);
+        }
+        let mut r = br.finalize_trng(trng);
+        r.fill_bytes(dest)
     }
 }
 
-
 /// Schnorr signing context
 ///
-/// We expect users to have seperate `SigningContext`s for each role 
+/// We expect users to have seperate `SigningContext`s for each role
 /// that signature play in their protocol.  These `SigningContext`s
 /// may be global `lazy_static!`s, or perhaps constants in future.
 ///
@@ -188,7 +253,7 @@ pub struct SigningContext(Transcript);
 /// Initialize a signing context from a static byte string that
 /// identifies the signature's role in the larger protocol.
 #[inline(always)]
-pub fn signing_context(context : &'static [u8]) -> SigningContext {
+pub fn signing_context(context: &'static [u8]) -> SigningContext {
     SigningContext::new(context)
 }
 
@@ -196,7 +261,7 @@ impl SigningContext {
     /// Initialize a signing context from a static byte string that
     /// identifies the signature's role in the larger protocol.
     #[inline(always)]
-    pub fn new(context : &'static [u8]) -> SigningContext {
+    pub fn new(context: &'static [u8]) -> SigningContext {
         SigningContext(Transcript::new(context))
     }
 
@@ -225,7 +290,7 @@ impl SigningContext {
     /// Initalize an owned signing transcript on a message provided as
     /// a hash function with 256 bit output.
     #[inline(always)]
-    pub fn hash256<D: FixedOutput<OutputSize=U32>>(&self, h: D) -> Transcript {
+    pub fn hash256<D: FixedOutput<OutputSize = U32>>(&self, h: D) -> Transcript {
         let mut prehash = [0u8; 32];
         prehash.copy_from_slice(h.fixed_result().as_slice());
         let mut t = self.0.clone();
@@ -236,7 +301,7 @@ impl SigningContext {
     /// Initalize an owned signing transcript on a message provided as
     /// a hash function with 512 bit output, usually a gross over kill.
     #[inline(always)]
-    pub fn hash512<D: FixedOutput<OutputSize=U64>>(&self, h: D) -> Transcript {
+    pub fn hash512<D: FixedOutput<OutputSize = U64>>(&self, h: D) -> Transcript {
         let mut prehash = [0u8; 64];
         prehash.copy_from_slice(h.fixed_result().as_slice());
         let mut t = self.0.clone();
@@ -245,7 +310,6 @@ impl SigningContext {
     }
 }
 
-
 /// Very simple transcript construction from an arbitrary hash fucntion.
 ///
 /// We provide this transcript type to directly use conventional hash
@@ -253,7 +317,7 @@ impl SigningContext {
 /// `Blake2x`.  We note that Shak128 might provide no advantage here,
 /// since `merlin::Transcript`s already use Keccak, and that no rust
 /// implementation for Blake2x currently exists.  
-/// 
+///
 /// We recommend using `merlin::Transcripts` instead because merlin
 /// might provide better domain seperartion than most hash functions.
 /// We therefore do not provide conveniences like `signing_context`
@@ -264,7 +328,8 @@ impl SigningContext {
 /// domain seperartion provided by our methods.  We do this to make
 /// `&mut SimpleTranscript : SigningTranscript` safe.
 pub struct SimpleTranscript<H>(H)
-where H: Input + ExtendableOutput + Clone;
+where
+    H: Input + ExtendableOutput + Clone;
 
 fn input_bytes<H: Input>(h: &mut H, bytes: &[u8]) {
     let l = bytes.len() as u64;
@@ -273,7 +338,8 @@ fn input_bytes<H: Input>(h: &mut H, bytes: &[u8]) {
 }
 
 impl<H> SimpleTranscript<H>
-where H: Input + ExtendableOutput + Clone
+where
+    H: Input + ExtendableOutput + Clone,
 {
     /// Create a `SimpleTranscript` from a conventional hash functions with an extensible output mode.
     ///
@@ -281,11 +347,14 @@ where H: Input + ExtendableOutput + Clone
     /// provided, so that our domain seperation works correctly even
     /// when using `&mut SimpleTranscript : SigningTranscript`.
     #[inline(always)]
-    pub fn new(h: H) -> SimpleTranscript<H> { SimpleTranscript(h) }
+    pub fn new(h: H) -> SimpleTranscript<H> {
+        SimpleTranscript(h)
+    }
 }
 
 impl<H> SigningTranscript for SimpleTranscript<H>
-where H: Input + ExtendableOutput + Clone
+where
+    H: Input + ExtendableOutput + Clone,
 {
     fn commit_bytes(&mut self, label: &'static [u8], bytes: &[u8]) {
         self.0.input(b"co");
@@ -301,7 +370,12 @@ where H: Input + ExtendableOutput + Clone
         self.0.clone().chain(b"xof").xof_result().read(dest);
     }
 
-    fn witness_bytes_rng/*<R>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, mut rng: R*/)
+    fn witness_bytes_rng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]], /*, mut rng: R*/
+    )
     //where R: Rng+CryptoRng
     {
         let mut h = self.0.clone().chain(b"wb");
@@ -314,6 +388,29 @@ where H: Input + ExtendableOutput + Clone
 
         let mut r = [0u8; 32];
         //rng.fill_bytes(&mut r); //ForceModified
+        r[0] = 0; // for mut warning
+        h.input(&r);
+        h.xof_result().read(dest);
+    }
+
+    fn witness_bytes_trng(
+        &self,
+        label: &'static [u8],
+        dest: &mut [u8],
+        nonce_seeds: &[&[u8]],
+        trng: &[u8],
+    ) {
+        let mut h = self.0.clone().chain(b"wb");
+        input_bytes(&mut h, label);
+        for ns in nonce_seeds {
+            input_bytes(&mut h, ns);
+        }
+        let l = dest.len() as u64;
+        h.input(l.to_le_bytes());
+
+        let mut r = [0u8; 32];
+        //rng.fill_bytes(&mut r); //ForceModified
+        r.copy_from_slice(&trng[..]);
         h.input(&r);
         h.xof_result().read(dest);
     }
@@ -329,80 +426,35 @@ where H: Input + ExtendableOutput + Clone
 }
 */
 
+// pub struct SigningTranscriptWithRng<T,R>
+// where T: SigningTranscript, R: Rng+CryptoRng
+// {
+// 	t: T,
+// 	rng: RefCell<R>,
+// }
 
-/// Schnorr signing transcript with the default `ThreadRng` replaced
-/// by an arbitrary `CryptoRng`.
-///
-/// If `ThreadRng` breaks on your platform, or merely if your paranoid,
-/// then you might "upgrade" from `ThreadRng` to `OsRng` by using calls
-/// like `keypair.sign( attach_rng(t,OSRng::new()) )`.
-/// We recommend instead simply fixing `ThreadRng` for your platform
-/// however.
-///
-/// There are also derandomization tricks like
-/// `attach_rng(t,ChaChaRng::from_seed([0u8; 32]))`
-/// for deterministic signing in tests too.  Although derandomization
-/// produces secure signatures, we recommend against doing this in
-/// production because we implement protocols like multi-signatures
-/// which likely become vulnerabile when derandomized.
-pub struct SigningTranscriptWithRng<T,R>
-where T: SigningTranscript, R: Rng+CryptoRng
-{
-	t: T,
-	rng: RefCell<R>,
-}
+// impl<T,R> SigningTranscript for SigningTranscriptWithRng<T,R>
+// where T: SigningTranscript, R: Rng+CryptoRng
+// {
+//     fn commit_bytes(&mut self, label: &'static [u8], bytes: &[u8])
+//         {  self.t.commit_bytes(label, bytes)  }
 
-impl<T,R> SigningTranscript for SigningTranscriptWithRng<T,R>
-where T: SigningTranscript, R: Rng+CryptoRng
-{
-    fn commit_bytes(&mut self, label: &'static [u8], bytes: &[u8])
-        {  self.t.commit_bytes(label, bytes)  }
+//     fn challenge_bytes(&mut self, label: &'static [u8], dest: &mut [u8])
+//         {  self.t.challenge_bytes(label, dest)  }
 
-    fn challenge_bytes(&mut self, label: &'static [u8], dest: &mut [u8])
-        {  self.t.challenge_bytes(label, dest)  }
+//     fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]])
+//        {  self.witness_bytes_rng(label, dest, nonce_seeds/*, &mut *self.rng.borrow_mut()*/)  }
 
-    fn witness_bytes(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]])
-       {  self.witness_bytes_rng(label, dest, nonce_seeds/*, &mut *self.rng.borrow_mut()*/)  }
+//     fn witness_bytes_rng/*<RR>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: RR*/)
+//     //where RR: Rng+CryptoRng
+//        {  self.t.witness_bytes_rng(label,dest,nonce_seeds/*,rng*/)  }
 
-    fn witness_bytes_rng/*<RR>*/(&self, label: &'static [u8], dest: &mut [u8], nonce_seeds: &[&[u8]]/*, rng: RR*/)
-    //where RR: Rng+CryptoRng
-       {  self.t.witness_bytes_rng(label,dest,nonce_seeds/*,rng*/)  }
+// }
 
-}
-
-/// Attach a `CryptoRng` to a `SigningTranscript` to repalce the default `ThreadRng`
-///
-/// There are tricks like `attach_rng(t,ChaChaRng::from_seed([0u8; 32]))`
-/// for deterministic tests.  We warn against doing this in production
-/// however because, although such derandomization produces secure Schnorr
-/// signatures, we do implement protocols here like multi-signatures which
-/// likely become vulnerabile when derandomized.
-pub fn attach_rng<T,R>(t: T, rng: R) -> SigningTranscriptWithRng<T,R>
-where T: SigningTranscript, R: Rng+CryptoRng
-{
-    SigningTranscriptWithRng {
-        t, rng: RefCell::new(rng)
-    }
-}
-
-/*
-#[cfg(debug_assertions)]
-use rand_chacha::ChaChaRng;
-
-/// Attach a `ChaChaRng` to a `Transcript` to repalce the default `ThreadRng`
-#[cfg(debug_assertions)]
-pub fn attach_chacharng(t: Transcript, seed: [u8; 32]) -> SigningTranscriptWithRng<ChaChaRng> {
-    attach_rng(t,ChaChaRng::from_seed(seed))
-}
-*/
-
-
-/*
-#[cfg(test)]
-mod test {
-    use rand::prelude::*; // ThreadRng,thread_rng
-    use sha3::Shake128;
-    use curve25519_dalek::digest::{Input};
-
-}
-*/
+// pub fn attach_rng<T,R>(t: T, rng: R) -> SigningTranscriptWithRng<T,R>
+// where T: SigningTranscript, R: Rng+CryptoRng
+// {
+//     SigningTranscriptWithRng {
+//         t, rng: RefCell::new(rng)
+//     }
+// }

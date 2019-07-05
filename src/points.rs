@@ -144,7 +144,7 @@ impl RistrettoBoth {
     }
 }
 
-serde_boilerplate!(RistrettoBoth);
+//serde_boilerplate!(RistrettoBoth);
 
 /// We hide fields largely so that only compairing the compressed forms works.
 impl PartialEq<Self> for RistrettoBoth {

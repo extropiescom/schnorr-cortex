@@ -48,32 +48,3 @@ pub fn multiply_scalar_by_cofactor(scalar: Scalar) -> Scalar {
     Scalar::from_bits(x)
 }
 */
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    // use ed25519_dalek::SecretKey;
-    use rand::{thread_rng, Rng};
-
-    // TODO: Simple test `RistrettoPoint` is implemented as an `EdwardsPoint`
-    // #[test]
-    // fn ristretto_point_is_edwards_point() {
-    // }
-
-    #[test]
-    fn cofactor_adjustment() {
-        let mut x: [u8; 32] = thread_rng().gen();
-        x[31] &= 0b00011111;
-        let mut y = x.clone();
-        multiply_scalar_bytes_by_cofactor(&mut y);
-        divide_scalar_bytes_by_cofactor(&mut y);
-        assert_eq!(x, y);
-
-        let mut x: [u8; 32] = thread_rng().gen();
-        x[0] &= 0b11111000;
-        let mut y = x.clone();
-        divide_scalar_bytes_by_cofactor(&mut y);
-        multiply_scalar_bytes_by_cofactor(&mut y);
-        assert_eq!(x, y);
-    }
-}

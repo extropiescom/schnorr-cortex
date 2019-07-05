@@ -14,7 +14,7 @@ use core::convert::AsRef;
 use core::default::Default;
 use core::fmt::{Debug};
 
-use rand::prelude::*;  // {RngCore,thread_rng};
+//use rand::prelude::*;  // {RngCore,thread_rng};
 use sha2::Sha512;
 
 // TODO: Replace with Zeroize but ClearOnDrop does not work with std
@@ -292,16 +292,23 @@ impl MiniSecretKey {
     /// # Input
     ///
     /// A CSPRNG with a `fill_bytes()` method, e.g. `rand_chacha::ChaChaRng`
-    pub fn generate<R>(mut csprng: R) -> MiniSecretKey
-    where R: CryptoRng + Rng,
+    // pub fn generate<R>(mut csprng: R) -> MiniSecretKey
+    // where R: CryptoRng + Rng,
+    // {
+    //     let mut sk: MiniSecretKey = MiniSecretKey([0u8; 32]);
+    //     csprng.fill_bytes(&mut sk.0);
+    //     sk
+    // }
+    pub fn generate() -> MiniSecretKey
     {
-        let mut sk: MiniSecretKey = MiniSecretKey([0u8; 32]);
-        csprng.fill_bytes(&mut sk.0);
+        let  sk: MiniSecretKey = MiniSecretKey([0u8; 32]);
+        //csprng.fill_bytes(&mut sk.0);
         sk
     }
+    
 }
 
-serde_boilerplate!(MiniSecretKey);
+//serde_boilerplate!(MiniSecretKey);
 
 
 /// A seceret key for use with Ristretto Schnorr signatures.
@@ -523,13 +530,22 @@ impl SecretKey {
     /// As we generate a `SecretKey` directly bypassing `MiniSecretKey`,
     /// so our secret keys do not satisfy the high bit "clamping"
     /// impoised on Ed25519 keys.
-    pub fn generate<R>(mut csprng: R) -> SecretKey
-    where R: CryptoRng + Rng,
+    // pub fn generate<R>(mut csprng: R) -> SecretKey
+    // where R: CryptoRng + Rng,
+    // {
+    //     let mut key: [u8; 64] = [0u8; 64];
+    //     csprng.fill_bytes(&mut key);
+    //     let mut nonce: [u8; 32] = [0u8; 32];
+    //     csprng.fill_bytes(&mut nonce);
+    //     SecretKey { key: Scalar::from_bytes_mod_order_wide(&key), nonce }
+    // }
+
+    pub fn generate() -> SecretKey
     {
-        let mut key: [u8; 64] = [0u8; 64];
-        csprng.fill_bytes(&mut key);
-        let mut nonce: [u8; 32] = [0u8; 32];
-        csprng.fill_bytes(&mut nonce);
+        let  key: [u8; 64] = [0u8; 64];
+        //csprng.fill_bytes(&mut key);
+        let  nonce: [u8; 32] = [0u8; 32];
+        //csprng.fill_bytes(&mut nonce);
         SecretKey { key: Scalar::from_bytes_mod_order_wide(&key), nonce }
     }
 
@@ -546,7 +562,7 @@ impl SecretKey {
     }
 }
 
-serde_boilerplate!(SecretKey);
+//serde_boilerplate!(SecretKey);
 
 
 /// A Ristretto Schnorr public key.
@@ -654,7 +670,7 @@ impl From<SecretKey> for PublicKey {
     }
 }
 
-serde_boilerplate!(PublicKey);
+//serde_boilerplate!(PublicKey);
 
 
 /// A Ristretto Schnorr keypair.
@@ -761,103 +777,21 @@ impl Keypair {
     /// We generate a `SecretKey` directly bypassing `MiniSecretKey`,
     /// so our secret keys do not satisfy the high bit "clamping"
     /// impoised on Ed25519 keys.
-    pub fn generate<R>(csprng: R) -> Keypair
-    where R: CryptoRng + Rng,
+    // pub fn generate<R>(csprng: R) -> Keypair
+    // where R: CryptoRng + Rng,
+    // {
+    //     let secret: SecretKey = SecretKey::generate(csprng);
+    //     let public: PublicKey = secret.to_public();
+
+    //     Keypair{ public, secret }
+    // }
+    pub fn generate() -> Keypair
     {
-        let secret: SecretKey = SecretKey::generate(csprng);
+        let secret: SecretKey = SecretKey::generate();
         let public: PublicKey = secret.to_public();
 
         Keypair{ public, secret }
     }
 }
 
-serde_boilerplate!(Keypair);
-
-
-#[cfg(test)]
-mod test {
-    // use std::vec::Vec;
-    // use hex::FromHex;
-    use rand::prelude::*; // ThreadRng,thread_rng
-    use super::*;
-
-    /*
-	TODO: Use some Ristretto point to do this test correctly.
-    use curve25519_dalek::edwards::{CompressedEdwardsY};  // EdwardsPoint
-    #[test]
-    fn public_key_from_bytes() {
-        static ED25519_PUBLIC_KEY : CompressedEdwardsY = CompressedEdwardsY([
-            215, 090, 152, 001, 130, 177, 010, 183,
-            213, 075, 254, 211, 201, 100, 007, 058,
-            014, 225, 114, 243, 218, 166, 035, 037,
-            175, 002, 026, 104, 247, 007, 081, 026, ]);
-        let pk = ED25519_PUBLIC_KEY.decompress().unwrap();
-        // let pk = unsafe { ::std::mem::transmute::<EdwardsPoint,RistrettoPoint>(pk) };
-        let point = super::super::ed25519::edwards_to_ristretto(pk).unwrap();
-        let ristretto_public_key = PublicKey::from_point(point);
-
-        assert_eq!(
-            ristretto_public_key.to_ed25519_public_key_bytes(),
-            pk.mul_by_cofactor().compress().0
-        );
-
-        // Make another function so that we can test the ? operator.
-        fn do_the_test(s: &[u8]) -> Result<PublicKey, SignatureError> {
-            let public_key = PublicKey::from_bytes(s) ?;
-            Ok(public_key)
-        }
-        assert_eq!(
-            do_the_test(ristretto_public_key.as_ref()),
-            Ok(ristretto_public_key)
-        );
-        assert_eq!(
-            do_the_test(&ED25519_PUBLIC_KEY.0),  // Not a Ristretto public key
-            Err(SignatureError::PointDecompressionError)
-        );
-    }
-	*/
-
-    #[test]
-    fn derives_from_core() {
-        let pk_d = PublicKey::default();
-        debug_assert_eq!(
-            pk_d.as_point().compress(),
-            CompressedRistretto::default()
-        );
-        debug_assert_eq!(
-            pk_d.as_compressed().decompress().unwrap(),
-            RistrettoPoint::default()
-        );
-    }
-
-    #[test]
-    fn keypair_clear_on_drop() {
-        let mut keypair: Keypair = Keypair::generate(&mut thread_rng());
-
-        // TODO: Replace with Zeroize but ClearOnDrop does not work with std
-        #[cfg(any(feature = "std"))]
-        keypair.clear();
-
-        fn as_bytes<T>(x: &T) -> &[u8] {
-            use core::mem;
-            use core::slice;
-
-            unsafe {
-                slice::from_raw_parts(x as *const T as *const u8, mem::size_of_val(x))
-            }
-        }
-
-        assert!(!as_bytes(&keypair).iter().all(|x| *x == 0u8));
-    }
-
-    #[test]
-    fn pubkey_from_mini_secret_and_expanded_secret() {
-        let mut csprng = thread_rng();
-        let mini_secret: MiniSecretKey = MiniSecretKey::generate(&mut csprng);
-        let secret: SecretKey = mini_secret.expand();
-        let public_from_mini_secret: PublicKey = mini_secret.expand_to_public();
-        let public_from_secret: PublicKey = secret.to_public();
-
-        assert!(public_from_mini_secret == public_from_secret);
-    }
-}
+//serde_boilerplate!(Keypair);

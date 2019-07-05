@@ -59,3 +59,18 @@ gcc -g -o test ./src/lib.c ./src/test.c  -L. -static ./target/release/libsr.a
 gcc  ./src/lib.c ./src/test.c -L. ./target/release/libsr.a -o test
 
 cortex-m-semihosting = "0.3.3"
+
+
+rand = {version = "0.6.5", default-features = false, features = ["i128_support"]}
+keccak = { version = "0.1.0", default-features = false }
+byteorder = { version = "1.2.4", default-features = false }
+
+cortex-m = "0.6.0"
+cortex-m-rt = "0.6.8"
+
+
+[profile.dev]
+panic = "abort"
+
+[profile.release]
+panic = "abort"

@@ -1,76 +1,26 @@
-# schnorrkel [![](https://img.shields.io/crates/v/schnorrkel.svg)](https://crates.io/crates/schnorrkel) [![](https://docs.rs/schnorrkel/badge.svg)](https://docs.rs/schnorrkel) [![](https://travis-ci.org/w3f/schnorrkel.svg?branch=master)](https://travis-ci.org/w3f/schnorrkel?branch=master)
+# schnorr-cortex 
 
+Schnorr-cortex is forked from Schnorrkel but with lot changes for embedded device. It is designed to be a staticlib then used by keil project but with gcc compiler. 
 
-Schnorrkel implements Schnorr signature on [Ristretto](https://ristretto.group) compressed Ed25519 points, as well as [related](https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) protocols like HDKD, [MuSig](https://eprint.iacr.org/2018/068), and a verifiable random function (VRF).  
+## Aimed target:
+### Cortex M3/M4
+### Flash used over 300KB
+### RAM used less then 64KB
 
-[Ristretto](https://doc.dalek.rs/curve25519_dalek/ristretto/index.html) implements roughly section 7 of Mike Hamburg's [Decaf](https://eprint.iacr.org/2015/673.pdf) paper to provide the 2-torsion free points of the Ed25519 curve as a prime order group.  ([related](https://forum.web3.foundation/t/account-signatures-and-keys-in-polkadot/70/3?u=burdges))
+embedded.rs offers a C wrapper for rest embedded C code. 'No libc' Since we found there is much issues with libc on Cortex.
 
-We employ the [merlin](https://github.com/dalek-cryptography/merlin) strategy of [type specific hashing methods](https://docs.rs/merlin/1.0.3/merlin/struct.Transcript.html) with sound domain separation.  These wrap Mike Hamburg's [STROBE128](https://strobe.sourceforge.io) construction for symmetric cryptography, itself based on Keccak.  
+onchip.rs offers a quick test on the chip to see if it can run the lib.
 
-In practice, all our methods consume either a `merlin::Transcript` which developers create handily by feeding data to context specific builders.  We do however also support `&mut merlin::Transcript` like the `merlin` crate prefers.   We shall exploit this in future to adapt schnorrkel to better conform with the dalek ecosystem's zero-knowledge proof tooling. 
+For small size, create .cargo/config and add
+```
+[target.'cfg(all(target_arch = "arm", target_os = "none"))']
+rustflags = [
+  # ..
+  "-C", "inline-threshold=25", # +
+]
+```
 
-We model the VRF itself on ["Making NSEC5 Practical for DNSSEC"](https://eprint.iacr.org/2017/099.pdf) by Dimitrios Papadopoulos, Duane Wessels, Shumon Huque, Moni Naor, Jan Včelák, Leonid Rezyin, andd Sharon Goldberg.  We note the [V(X)EdDSA signature scheme](https://www.signal.org/docs/specifications/xeddsa/#vxeddsa) by Trevor Perrin at is basically identical to the NSEC5 construction.  Also, the VRF supports individual signers merging numerous VRF outputs created with the same keypair, which parallels the "DLEQ Proofs" and "Batching the Proofs" sections of ["Privacy Pass - The Math"](https://blog.cloudflare.com/privacy-pass-the-math/#dleqproofs) by Alex Davidson, and ["Privacy Pass: Bypassing Internet Challenges Anonymously"](https://www.petsymposium.org/2018/files/papers/issue3/popets-2018-0026.pdf)
-by Alex Davidson, Ian Goldberg, Nick Sullivan, George Tankersley, and Filippo Valsorda.
-
-Aside from some naive sequential VRF construction, we currently only support the three-round [MuSig](https://eprint.iacr.org/2018/068) for Schnorr multi-signatures, due to all other Schnorr multi-signatures being somewhat broken.  In future, we should develop secure schemes like mBCJ from section 5.1 starting page 21 of https://eprint.iacr.org/2018/417 however mBCJ itself works by proof-of-possession, while a [delinearized](http://crypto.stanford.edu/~dabo/pubs/abstracts/aggsurvey.html) variant sounds more applicable.
-
-
-There are partial bindings for [C](https://github.com/Warchant/sr25519-crust), [JavaScript](https://github.com/paritytech/schnorrkel-js/), and [Python](https://gitlab.com/kauriid/schnorrpy/) as well.
-
-
-[dependencies.curve25519-dalek]
-# git = "https://github.com/dalek-cryptography/curve25519-dalek"
-version = "1.0"
-default-features = false
-
-[dependencies.ed25519-dalek]
-# git = "https://github.com/dalek-cryptography/ed25519-dalek"
-# branch = "develop"
-version = "1.0.0-pre.1"
-default-features = false
-
-
-[dev-dependencies]
-hex = "^0.3"
-sha2 = "^0.8"
-bincode = "^0.9"
-criterion = "0.2"
-
-[[bench]]
-name = "schnorr_benchmarks"
-harness = false
-
-[features]
-default = ["std", "u64_backend"]
-std = ["curve25519-dalek/std", "rand/std"]
-alloc = ["curve25519-dalek/alloc"]
-nightly = ["curve25519-dalek/nightly", "rand/nightly", "clear_on_drop/nightly"]
-asm = ["sha2/asm"]
-yolocrypto = ["curve25519-dalek/yolocrypto"]
-u64_backend = ["curve25519-dalek/u64_backend", "ed25519-dalek/u64_backend"]
-u32_backend = ["curve25519-dalek/u32_backend", "ed25519-dalek/u32_backend"]
-avx2_backend = ["curve25519-dalek/avx2_backend", "ed25519-dalek/avx2_backend"]
-
-
-cortex-m-rt = {version="0.6.8"}
-
- cargo build --release --target thumbv7m-none-eabi --no-default-features
-gcc -g -o test ./src/lib.c ./src/test.c  -L. -static ./target/release/libsr.a
-gcc  ./src/lib.c ./src/test.c -L. ./target/release/libsr.a -o test
-
-cortex-m-semihosting = "0.3.3"
-
-
-rand = {version = "0.6.5", default-features = false, features = ["i128_support"]}
-keccak = { version = "0.1.0", default-features = false }
-byteorder = { version = "1.2.4", default-features = false }
-
-cortex-m = "0.6.0"
-cortex-m-rt = "0.6.8"
-
-
-[profile.dev]
-panic = "abort"
-
-[profile.release]
-panic = "abort"
+To build lib:
+```
+cargo build --release --target thumbv7m-none-eabi --no-default-features
+```

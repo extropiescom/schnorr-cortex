@@ -57,8 +57,7 @@ pub struct sr_data {
 /// ```
 #[no_mangle]
 pub unsafe extern "C" fn sr_init() {
-	//let start:usize = rt::heap_start() as usize;
-	let start: usize = 0x2000000 as usize;
+	let start:usize = rt::heap_start() as usize;
 	let size: usize = 1024; // in bytes
 	ALLOCATOR.init(start, size);
 }
